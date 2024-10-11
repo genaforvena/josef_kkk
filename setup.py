@@ -4,14 +4,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="ai-call-assistant",
+    name="josef_kkk",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Fake",
+    author_email="",
     description="An AI-powered assistant for handling calls with German bureaucracy",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/ai-call-assistant",
+    url="https://github.com/genaforvena/josef_kkk",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -31,7 +31,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "ai-call-assistant=ai_call_assistant.main:main",
+            "josef_kkk=josef_kkk.main:main",
         ],
     },
 )

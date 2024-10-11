@@ -21,14 +21,9 @@ This project implements an AI-powered assistant to help with phone calls to Germ
 ## Installation
 
 1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/ai-call-assistant.git
-   cd ai-call-assistant
-   ```
-
 2. Install the required Python packages:
    ```
-   pip install SpeechRecognition pyttsx3 anthropic
+   pip install -r requirements.txt 
    ```
 
 3. Set up your Anthropic API key as an environment variable:
@@ -60,19 +55,3 @@ This project implements an AI-powered assistant to help with phone calls to Germ
 - Always review the AI's suggestions before they are spoken to ensure accuracy and appropriateness.
 - This tool is meant to assist with calls, not to fully automate them. Maintain oversight throughout the conversation.
 - Ensure you have the legal right to record and use AI assistance for your calls in your jurisdiction.
-
-## Customization
-
-You can modify the `AICallAssistant` class in the script to adjust various parameters such as the AI model used, the speech recognition language, or the text-to-speech voice.
-
-## Contributing
-
-Contributions to improve the assistant are welcome. Please feel free to submit a Pull Request.
-
-## License
-
-[Specify your chosen license here]
-
-## Disclaimer
-
-This tool is provided as-is, without any guarantees. Users are responsible for ensuring their use of this tool complies with all applicable laws and regulations.
