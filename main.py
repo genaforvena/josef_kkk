@@ -1,149 +1,74 @@
 import speech_recognition as sr
-import pyttsx3
-import anthropic
-import json
+from googletrans import Translator
+import threading
+import pyaudio
+import wave
 import os
-import requests
-from datetime import datetime
+import time
 
-class AICallAssistant:
-    def __init__(self, use_ollama=False, ollama_model="llama2"):
-        self.recognizer = sr.Recognizer()
-        self.engine = pyttsx3.init()
-        self.conversation_history = []
-        self.use_ollama = use_ollama
-        self.ollama_model = ollama_model
+# Initialize recognizer and translator
+recognizer = sr.Recognizer()
+translator = Translator()
+
+# Audio recording parameters
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 44100
+RECORD_SECONDS = 5
+WAVE_OUTPUT_FILENAME = "temp_audio.wav"
+
+# Function to record audio
+def record_audio():
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    frames_per_buffer=CHUNK)
+    
+    print("* Recording")
+    frames = []
+    
+    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream.read(CHUNK)
+        frames.append(data)
+    
+    print("* Done recording")
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+    
+    wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
+
+# Function to transcribe and translate
+def transcribe_and_translate():
+    while True:
+        record_audio()
         
-        if not self.use_ollama:
-            self.client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
-
-    def transcribe_audio(self, audio_file=None):
-        if audio_file:
-            with sr.AudioFile(audio_file) as source:
-                audio = self.recognizer.record(source)
-        else:
-            with sr.Microphone() as source:
-                print("Listening...")
-                audio = self.recognizer.listen(source)
+        with sr.AudioFile(WAVE_OUTPUT_FILENAME) as source:
+            audio = recognizer.record(source)
         
         try:
-            text = self.recognizer.recognize_google(audio, language="de-DE")
-            print("Transcribed: ", text)
-            return text
+            text = recognizer.recognize_google(audio)
+            translation = translator.translate(text, dest='en')
+            print(f"Original: {text}")
+            print(f"Translation: {translation.text}")
+            print("-----------------------")
         except sr.UnknownValueError:
-            print("Could not understand audio")
-            return ""
+            print("Speech Recognition could not understand audio")
         except sr.RequestError as e:
-            print(f"Could not request results; {e}")
-            return ""
-
-    def generate_response(self, user_input):
-        self.conversation_history.append({"role": "human", "content": user_input})
+            print(f"Could not request results from Speech Recognition service; {e}")
         
-        if self.use_ollama:
-            prompt = "Du bist ein KI-Assistent, der bei einem Telefonat mit der deutschen Bürokratie hilft. Bitte antworte immer auf Deutsch und gib präzise, relevante Antworten.\n\n"
-            for message in self.conversation_history:
-                prompt += f"{message['role'].capitalize()}: {message['content']}\n"
-            prompt += "Assistant: "
-
-            response = requests.post('http://localhost:11434/api/generate', 
-                                     json={
-                                         "model": self.ollama_model,
-                                         "prompt": prompt,
-                                         "stream": False
-                                     })
-            if response.status_code == 200:
-                ai_response = response.json()['response']
-            else:
-                ai_response = "Error: Could not generate response from Ollama."
-        else:
-            messages = [
-                {"role": "system", "content": "Du bist ein KI-Assistent, der bei einem Telefonat mit der deutschen Bürokratie hilft. Bitte antworte immer auf Deutsch und gib präzise, relevante Antworten."},
-                *self.conversation_history
-            ]
-            
-            response = self.client.messages.create(
-                model="claude-3-opus-20240229",
-                messages=messages,
-                max_tokens=300
-            )
-            
-            ai_response = response.content[0].text
+        # Remove temporary audio file
+        os.remove(WAVE_OUTPUT_FILENAME)
         
-        self.conversation_history.append({"role": "assistant", "content": ai_response})
-        return ai_response
+        time.sleep(0.1)  # Short pause to prevent CPU overload
 
-    def text_to_speech(self, text):
-        self.engine.setProperty('voice', 'german')
-        self.engine.say(text)
-        self.engine.runAndWait()
-
-    def save_transcript(self):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"gespraechsprotokoll_{timestamp}.json"
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(self.conversation_history, f, ensure_ascii=False, indent=2)
-        print(f"Protokoll gespeichert als {filename}")
-
-    def run(self, audio_file=None):
-        print("Anruf gestartet. Was ist das Ziel dieses Gesprächs?")
-        goal = input()
-        self.conversation_history.append({"role": "system", "content": f"Das Ziel des Benutzers für dieses Gespräch ist: {goal}"})
-        
-        print("Der Anrufassistent ist bereit. Beginnen Sie Ihr Gespräch.")
-        
-        while True:
-            agent_speech = self.transcribe_audio(audio_file)
-            if agent_speech:
-                print("Agent:", agent_speech)
-                suggested_response = self.generate_response(agent_speech)
-                print("Vorgeschlagene Antwort:", suggested_response)
-                
-                user_choice = input("Diese Antwort verwenden? (j/n/ä für ändern): ").lower()
-                if user_choice == 'j':
-                    self.text_to_speech(suggested_response)
-                elif user_choice == 'n':
-                    custom_response = input("Geben Sie Ihre Antwort ein: ")
-                    self.text_to_speech(custom_response)
-                    self.conversation_history.append({"role": "assistant", "content": custom_response})
-                else:
-                    modified_response = input("Geben Sie die geänderte Antwort ein: ")
-                    self.text_to_speech(modified_response)
-                    self.conversation_history.append({"role": "assistant", "content": modified_response})
-            
-            if input("Fortfahren? (j/n): ").lower() != 'j':
-                break
-        
-        print("Anruf beendet.")
-        self.save_transcript()
-
-def check_ollama_model(model_name):
-    response = requests.get(f'http://localhost:11434/api/show', params={'name': model_name})
-    return response.status_code == 200
-
-def download_ollama_model(model_name):
-    print(f"Downloading Ollama model {model_name}...")
-    response = requests.post('http://localhost:11434/api/pull', json={'name': model_name, 'stream': False})
-    if response.status_code == 200:
-        print(f"Model {model_name} downloaded successfully.")
-    else:
-        print(f"Failed to download model {model_name}. Error: {response.text}")
-
-if __name__ == "__main__":
-    use_ollama = input("Use Ollama for local testing? (y/n): ").lower() == 'y'
-    
-    if use_ollama:
-        ollama_model = input("Enter Ollama model name (default: llama2): ") or "llama2"
-        if not check_ollama_model(ollama_model):
-            if input(f"Model {ollama_model} not found. Download it? (y/n): ").lower() == 'y':
-                download_ollama_model(ollama_model)
-            else:
-                print("Exiting as the required model is not available.")
-                exit()
-    else:
-        ollama_model = None
-
-    audio_file = input("Enter path to audio file (or press Enter to use microphone): ").strip() or None
-    
-    assistant = AICallAssistant(use_ollama=use_ollama, ollama_model=ollama_model)
-    assistant.run(audio_file)
+# Start the transcription and translation process
+transcribe_and_translate()
