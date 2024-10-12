@@ -1,74 +1,75 @@
-import speech_recognition as sr
-from googletrans import Translator
+import recorder
 import threading
-import pyaudio
-import wave
-import os
-import time
+import queue
+import ollama
+import json
 
-# Initialize recognizer and translator
-recognizer = sr.Recognizer()
-translator = Translator()
+def collect_input(input_queue):
+    collected_text = ""
+    for original, translation in recorder.transcribe_and_translate():
+        collected_text += f"Original: {original}\nTranslation: {translation}\n\n"
+        print(f"Original: {original}")
+        print(f"Translation: {translation}")
+        print("-----------------------")
+        if not input_queue.empty():
+            return collected_text
+    return collected_text
 
-# Audio recording parameters
-CHUNK = 1024
-FORMAT = pyaudio.paInt16
-CHANNELS = 1
-RATE = 44100
-RECORD_SECONDS = 5
-WAVE_OUTPUT_FILENAME = "temp_audio.wav"
+def stream_ollama_response(client, model, messages, stop_event):
+    stream = client.chat(model=model, messages=messages, stream=True)
+    
+    for chunk in stream:
+        if stop_event.is_set():
+            break
+        if 'message' in chunk:
+            yield chunk['message']['content']
 
-# Function to record audio
-def record_audio():
-    p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
+def main():
+    print("Starting conversation. Press Enter to get Ollama's response...")
     
-    print("* Recording")
-    frames = []
-    
-    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data = stream.read(CHUNK)
-        frames.append(data)
-    
-    print("* Done recording")
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-    
-    wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(p.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-    wf.close()
+    input_queue = queue.Queue()
+    conversation_history = []
+    client = ollama.Client()
 
-# Function to transcribe and translate
-def transcribe_and_translate():
     while True:
-        record_audio()
-        
-        with sr.AudioFile(WAVE_OUTPUT_FILENAME) as source:
-            audio = recognizer.record(source)
-        
-        try:
-            text = recognizer.recognize_google(audio)
-            translation = translator.translate(text, dest='en')
-            print(f"Original: {text}")
-            print(f"Translation: {translation.text}")
-            print("-----------------------")
-        except sr.UnknownValueError:
-            print("Speech Recognition could not understand audio")
-        except sr.RequestError as e:
-            print(f"Could not request results from Speech Recognition service; {e}")
-        
-        # Remove temporary audio file
-        os.remove(WAVE_OUTPUT_FILENAME)
-        
-        time.sleep(0.1)  # Short pause to prevent CPU overload
+        input_thread = threading.Thread(target=lambda q: q.put(input()), args=(input_queue,))
+        input_thread.start()
 
-# Start the transcription and translation process
-transcribe_and_translate()
+        collected_text = collect_input(input_queue)
+        
+        input_thread.join()
+        input_queue.get()  # Clear the queue
+
+        if collected_text:
+            conversation_history.append({
+                'role': 'user',
+                'content': collected_text
+            })
+
+            print("\nProcessing collected text with Ollama (llama3.2 model)...")
+            print("\nOllama's response:")
+            print("Press Space to stop the response...")
+
+            stop_event = threading.Event()
+            response_thread = threading.Thread(target=lambda: [print(chunk, end='', flush=True) for chunk in stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)])
+            response_thread.start()
+
+            while response_thread.is_alive():
+                if input() == ' ':
+                    stop_event.set()
+                    break
+
+            response_thread.join()
+
+            # Add Ollama's response to conversation history
+            conversation_history.append({
+                'role': 'assistant',
+                'content': ''.join(stream_ollama_response(client, 'llama3.2', conversation_history, threading.Event()))
+            })
+
+            print("\n\nResponse ended.")
+
+        print("\nContinue speaking. Press Enter for the next response...")
+
+if __name__ == "__main__":
+    main()

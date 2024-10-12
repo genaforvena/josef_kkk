@@ -1,5 +1,4 @@
 import speech_recognition as sr
-from googletrans import Translator
 import threading
 import pyaudio
 import wave
@@ -9,7 +8,6 @@ from typing import Generator, Tuple
 
 # Initialize recognizer and translator
 recognizer: sr.Recognizer = sr.Recognizer()
-translator: Translator = Translator()
 
 # Audio recording parameters
 CHUNK: int = 1024
@@ -57,7 +55,9 @@ def transcribe_and_translate() -> Generator[Tuple[str, str], None, None]:
         
         try:
             text: str = recognizer.recognize_google(audio)
-            translation: str = translator.translate(text, dest='en').text
+            translation: str = ''
+ #           if len(text) > 1:
+#                translation: str = translator.translate(text, dest='en').text
             yield (text, translation)
             print(f"Original: {text}")
             print(f"Translation: {translation}")
