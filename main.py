@@ -69,7 +69,7 @@ def main(instruction, use_second_response):
             recording_stop_event.set()  # Stop recording when Enter is pressed
         else:
             if len(collected_text) == 0:
-                collected_text = "Continue the conversation."
+                collected_text = "Write a reply."
 
         if collected_text:
             print("Ollama prompt: " + collected_text)
@@ -132,7 +132,7 @@ def main(instruction, use_second_response):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are in a phone conversation with German bureaucracy. You reply and speak only in English. You act erratically as a maniac.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are talking to German bureaucracy. You speak only in English, like a soundcloud rapper with heavy Beckett influence. You act erratically as a maniac.", 
                         help="Instruction for Ollama's behavior")
     parser.add_argument("--use_second_response", default=True, action="store_true", help="Use second response as input for next iteration")
     args = parser.parse_args()
