@@ -81,24 +81,20 @@ def main(instruction):
             response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
             sentence_stream = sentence_generator(response_stream)
             
-            response_thread = threading.Thread(target=lambda: [print(sentence, end=' ', flush=True) for sentence in sentence_stream])
-            response_thread.start()
-
-            speak_thread = threading.Thread(target=speak_stream, args=(sentence_generator(stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)), stop_event))
+            speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
             speak_thread.start()
 
-            while response_thread.is_alive() or speak_thread.is_alive():
+            while speak_thread.is_alive():
                 if input() == ' ':
                     stop_event.set()
                     break
 
-            response_thread.join()
             speak_thread.join()
 
             # Add Ollama's response to conversation history
             conversation_history.append({
                 'role': 'assistant',
-                'content': ''.join(stream_ollama_response(client, 'llama3.2:1b', conversation_history, threading.Event()))
+                'content': ' '.join(sentence_stream)
             })
 
             print("\n\nResponse ended.")

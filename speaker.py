@@ -24,6 +24,7 @@ def speak_stream(stream_generator, stop_event):
             break
         
         text = text.strip()
+        print("Saying: " + text)
         
         if text:
             # Use SSML for more natural pauses and emphasis
@@ -31,3 +32,5 @@ def speak_stream(stream_generator, stop_event):
                    f'<prosody rate="slow" pitch="medium">{text}</prosody>' \
                    f'</speak>'
             sapi.Speak(ssml, 8)
+
+    print("Done speaking...")
