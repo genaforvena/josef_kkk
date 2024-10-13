@@ -105,9 +105,6 @@ def main(instruction, use_second_response):
                 second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
                 second_sentence_stream = sentence_generator(second_response_stream)
                 
-                second_full_response = ' '.join(list(second_sentence_stream))
-                print("Second Ollama: " + second_full_response)
-
                 speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
                 speak_thread.start()
 
@@ -118,7 +115,7 @@ def main(instruction, use_second_response):
 
                 speak_thread.join()
 
-                conversation_history.append({'role': 'user', 'content': second_full_response})
+                conversation_history.append({'role': 'user', 'content': ' '.join(second_sentence_stream) })
 
             print("\n\nResponse ended.")
 
