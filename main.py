@@ -2,7 +2,7 @@ import recorder
 import threading
 import queue
 import ollama
-import json
+import keyboard
 from speaker import speak_stream
 import re
 import argparse
@@ -32,16 +32,11 @@ def sentence_generator(text_stream):
     sentence = ""
     for chunk in text_stream:
         sentence += chunk
-        sentences = re.split(r'(?<=[.!?])\s+', sentence)
-        if len(sentences) > 1:
-            for s in sentences[:-1]:
-                yield s.strip()
-            sentence = sentences[-1]
     if sentence:
         yield sentence.strip()
 
 def main(instruction, use_second_response):
-    print("Starting conversation. Press Enter to stop speech recognition and get Ollama's response...")
+    print("Starting conversation...")
     
     input_queue = queue.Queue()
     conversation_history = []
@@ -54,8 +49,10 @@ def main(instruction, use_second_response):
         'content': instruction
     })
 
+    collected_text = ''
     while True:
         if not use_second_response:
+            print("Press Enter to stop speech recognition and get Ollama's response...")
             input_thread = threading.Thread(target=lambda q: q.put(input()), args=(input_queue,))
             input_thread.start()
 
@@ -66,7 +63,8 @@ def main(instruction, use_second_response):
             input_queue.get()  # Clear the queue
             recording_stop_event.set()  # Stop recording when Enter is pressed
         else:
-            collected_text = "Continue the conversation."
+            if len(collected_text) == 0:
+                collected_text = "Continue the conversation."
 
         if collected_text:
             print("Ollama prompt: " + collected_text)
@@ -86,20 +84,19 @@ def main(instruction, use_second_response):
             speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
             speak_thread.start()
 
-            while speak_thread.is_alive():
-                if input() == ' ':
-                    stop_event.set()
-                    break
-
             speak_thread.join()
 
+            first_response = ' '.join(sentence_stream)
             # Add Ollama's response to conversation history
             conversation_history.append({
                 'role': 'assistant',
-                'content': ' '.join(sentence_stream) 
+                'content': first_response
             })
 
             if use_second_response:
+                keyboard.send("enter")
+                recording_stop_event.clear()
+
                 print("\nGenerating second response...")
                 stop_event.clear()
                 second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
@@ -108,14 +105,12 @@ def main(instruction, use_second_response):
                 speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
                 speak_thread.start()
 
-                while speak_thread.is_alive():
-                    if input() == ' ':
-                        stop_event.set()
-                        break
-
                 speak_thread.join()
 
-                conversation_history.append({'role': 'user', 'content': ' '.join(second_sentence_stream) })
+                second_response = ' '.join(second_sentence_stream)
+                conversation_history.append({'role': 'user', 'content': second_response})
+                collected_text = second_response  # Use second response as input for next iteration
+                recording_stop_event.clear()
 
             print("\n\nResponse ended.")
 
@@ -123,8 +118,8 @@ def main(instruction, use_second_response):
             print("\nContinue speaking. Press Enter to stop speech recognition and get the next response...")
             recording_stop_event.clear()
         else:
-            print("\nPress Enter to continue the conversation between Ollamas...")
-            input()  # Wait for Enter press before continuing
+            keyboard.send("enter")
+
 
     # Don't forget to stop and join the speaker thread at the end
     speaker.stop()
