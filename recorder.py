@@ -70,7 +70,7 @@ def transcribe_and_translate() -> Generator[Tuple[str, str], None, None]:
         # Remove temporary audio file
         os.remove(WAVE_OUTPUT_FILENAME)
         
-        time.sleep(0.1)  # Short pause to prevent CPU overload
+        time.sleep(0.01)  # Short pause to prevent CPU overload
 
 if __name__ == '__main__':
     transcribe_and_translate()
