@@ -73,12 +73,12 @@ def main(instruction):
                 'content': collected_text
             })
 
-            print("\nProcessing collected text with Ollama (llama3.2:1b model)...")
+            print("\nProcessing collected text with Ollama (llama3.2 model)...")
             print("\nOllama's response:")
             print("Press Space to stop the response...")
 
             stop_event = threading.Event()
-            response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
+            response_stream = stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)
             sentence_stream = sentence_generator(response_stream)
             
             speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
