@@ -108,7 +108,7 @@ def main(instruction):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are an actor rehearsing a part in a phone conversation. Reply in German only.", 
+    parser.add_argument("--instruction", type=str, default="You are an actor rehearsing a part in a phone conversation. Reply in English only.", 
                         help="Instruction for Ollama's behavior")
     args = parser.parse_args()
     
