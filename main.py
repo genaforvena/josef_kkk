@@ -13,8 +13,7 @@ def collect_input(input_queue, stop_event):
         if stop_event.is_set():
             break
         collected_text += original
-        print(f"Original: {original}")
-        print(f"Translation: {translation}")
+        print(f"Recorded: {original}")
         print("-----------------------")
         if not input_queue.empty():
             return collected_text
@@ -104,7 +103,7 @@ def main(instruction):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are in a phone conversation. Reply naturally as if human would.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are in a phone conversation with German beuracracy. You reply and speak only in German. Reply naturally as if human would.", 
                         help="Instruction for Ollama's behavior")
     args = parser.parse_args()
     
