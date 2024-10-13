@@ -5,11 +5,14 @@ import ollama
 import json
 from speaker import speak_stream
 import re
+import argparse
 
-def collect_input(input_queue):
+def collect_input(input_queue, stop_event):
     collected_text = ""
     for original, translation in recorder.transcribe_and_translate():
-        collected_text += f"Original: {original}\nTranslation: {translation}\n\n"
+        if stop_event.is_set():
+            break
+        collected_text += original
         print(f"Original: {original}")
         print(f"Translation: {translation}")
         print("-----------------------")
@@ -38,23 +41,33 @@ def sentence_generator(text_stream):
     if sentence:
         yield sentence.strip()
 
-def main():
-    print("Starting conversation. Press Enter to get Ollama's response...")
+def main(instruction):
+    print("Starting conversation. Press Enter to stop speech recognition and get Ollama's response...")
     
     input_queue = queue.Queue()
     conversation_history = []
     client = ollama.Client()
+    recording_stop_event = threading.Event()
+
+    # Add initial system message to set the behavior
+    conversation_history.append({
+        'role': 'system',
+        'content': instruction
+    })
 
     while True:
         input_thread = threading.Thread(target=lambda q: q.put(input()), args=(input_queue,))
         input_thread.start()
 
-        collected_text = collect_input(input_queue)
+        recording_stop_event.clear()
+        collected_text = collect_input(input_queue, recording_stop_event)
         
         input_thread.join()
         input_queue.get()  # Clear the queue
+        recording_stop_event.set()  # Stop recording when Enter is pressed
 
         if collected_text:
+            print("Ollama prompt: " + collected_text)
             conversation_history.append({
                 'role': 'user',
                 'content': collected_text
@@ -90,7 +103,13 @@ def main():
 
             print("\n\nResponse ended.")
 
-        print("\nContinue speaking. Press Enter for the next response...")
+        print("\nContinue speaking. Press Enter to stop speech recognition and get the next response...")
+        recording_stop_event.clear()  # Resume recording for the next iteration
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Ollama conversation script")
+    parser.add_argument("--instruction", type=str, default="You are an actor rehearsing a part in a phone conversation. Reply in German only.", 
+                        help="Instruction for Ollama's behavior")
+    args = parser.parse_args()
+    
+    main(args.instruction)
