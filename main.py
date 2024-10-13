@@ -28,12 +28,17 @@ def stream_ollama_response(client, model, messages, stop_event):
         if 'message' in chunk:
             yield chunk['message']['content']
 
-def sentence_generator(text_stream):
-    sentence = ""
+def paragraph_generator(text_stream):
+    paragraph = ""
     for chunk in text_stream:
-        sentence += chunk
-    if sentence:
-        yield sentence.strip()
+        paragraph += chunk
+        if '\n\n' in paragraph:
+            parts = paragraph.split('\n\n')
+            for part in parts[:-1]:
+                yield part.strip()
+            paragraph = parts[-1]
+    if paragraph:
+        yield paragraph.strip()
 
 def main(instruction, use_second_response):
     print("Starting conversation...")
@@ -79,7 +84,7 @@ def main(instruction, use_second_response):
 
             stop_event = threading.Event()
             response_stream = stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)
-            sentence_stream = sentence_generator(response_stream)
+            sentence_stream = paragraph_generator(response_stream)
             
             speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
             speak_thread.start()
@@ -100,7 +105,7 @@ def main(instruction, use_second_response):
                 print("\nGenerating second response...")
                 stop_event.clear()
                 second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
-                second_sentence_stream = sentence_generator(second_response_stream)
+                second_sentence_stream = paragraph_generator(second_response_stream)
                 
                 speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
                 speak_thread.start()
@@ -127,9 +132,9 @@ def main(instruction, use_second_response):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are in a phone conversation with German bureaucracy. You reply and speak only in English. Reply naturally as if human would.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are in a phone conversation with German bureaucracy. You reply and speak only in English. You act erratically as a maniac.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--use_second_response", action="store_true", help="Use second response as input for next iteration")
+    parser.add_argument("--use_second_response", default=True, action="store_true", help="Use second response as input for next iteration")
     args = parser.parse_args()
     
     main(args.instruction, args.use_second_response)
