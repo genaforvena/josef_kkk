@@ -3,7 +3,7 @@ import numpy as np
 import pytesseract
 from PIL import Image
 
-def preprocess_image(image):
+def preprocess_image(image: np.ndarray) -> np.ndarray:
     # Convert PIL Image to numpy array if necessary
     if isinstance(image, Image.Image):
         image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -17,7 +17,7 @@ def preprocess_image(image):
     
     return thresh
 
-def detect_lines(image):
+def detect_lines(image: np.ndarray) -> tuple:
     # Detect horizontal and vertical lines
     horizontal = np.copy(image)
     vertical = np.copy(image)
@@ -36,7 +36,7 @@ def detect_lines(image):
     
     return horizontal, vertical
 
-def extract_form_fields(image):
+def extract_form_fields(image: np.ndarray) -> list:
     # Preprocess the image
     processed = preprocess_image(image)
     
@@ -67,16 +67,19 @@ def extract_form_fields(image):
     
     return fields
 
-def main(image_path):
+def extract_fields(image_path: str) -> list:
     # Read the image
     image = cv2.imread(image_path)
     
     if image is None:
         print(f"Error: Could not read image {image_path}")
-        return
+        return list()
 
     # Extract form fields
-    extracted_fields = extract_form_fields(image)
+    return extract_form_fields(image)
+
+def main(image_path: str):
+    extracted_fields = extract_fields(image_path)
     
     print("Extracted form fields:")
     for label, value in extracted_fields:
