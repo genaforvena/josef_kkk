@@ -53,6 +53,6 @@ def fill_form(image_path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python script.py <image_path>")
+        fill_form('https://asserts-marketing.s3.eu-central-1.amazonaws.com/Public/Blog+Images/steuererklaerung.de/muster-lstb-2023.jpg') 
     else:
         fill_form(sys.argv[1])
