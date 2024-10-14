@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import pytesseract
 from PIL import Image
+import requests
+from io import BytesIO
 
 def preprocess_image(image: np.ndarray) -> np.ndarray:
     # Convert PIL Image to numpy array if necessary
@@ -78,8 +80,26 @@ def extract_fields(image_path: str) -> list:
     # Extract form fields
     return extract_form_fields(image)
 
-def main(image_path: str):
-    extracted_fields = extract_fields(image_path)
+def download_image(url: str) -> np.ndarray:
+    response = requests.get(url)
+    if response.status_code == 200:
+        image = Image.open(BytesIO(response.content))
+        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    else:
+        print(f"Error: Could not download image from {url}")
+        return None
+
+def main(image_source: str):
+    if image_source.startswith('http://') or image_source.startswith('https://'):
+        image = download_image(image_source)
+    else:
+        image = cv2.imread(image_source)
+    
+    if image is None:
+        print(f"Error: Could not read image from {image_source}")
+        return
+    
+    extracted_fields = extract_form_fields(image)
     
     print("Extracted form fields:")
     for label, value in extracted_fields:
@@ -88,6 +108,6 @@ def main(image_path: str):
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 2:
-        print("Usage: python script.py <image_path>")
+        print("Usage: python script.py <image_path_or_url>")
     else:
         main(sys.argv[1])
