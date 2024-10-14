@@ -1,29 +1,7 @@
-import argparse
 import cv2
 import numpy as np
 import pytesseract
 from PIL import Image
-import pdf2image
-import os
-
-def read_file(file_path):
-    _, file_extension = os.path.splitext(file_path)
-    if file_extension.lower() == '.pdf':
-        try:
-            return pdf2image.convert_from_path(file_path)
-        except Exception as e:
-            print(f"Error reading PDF: {e}")
-            return []
-    else:
-        image = read_image(file_path)
-        return [image] if image is not None else []
-
-def read_image(image_path):
-    # Read the image using OpenCV
-    image = cv2.imread(image_path)
-    if image is None:
-        print(f"Error: Could not read image {image_path}")
-    return image
 
 def preprocess_image(image):
     # Convert PIL Image to numpy array if necessary
@@ -33,51 +11,80 @@ def preprocess_image(image):
     # Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
-    # Apply thresholding to preprocess the image
-    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    # Apply adaptive thresholding
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                   cv2.THRESH_BINARY, 11, 2)
     
-    # Apply dilation to connect text components
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-    dilate = cv2.dilate(thresh, kernel, iterations=1)
-    
-    return dilate
+    return thresh
 
-def extract_form_data(processed_image):
-    # Perform OCR on the processed image
-    text = pytesseract.image_to_string(Image.fromarray(processed_image))
-    print(text)
+def detect_lines(image):
+    # Detect horizontal and vertical lines
+    horizontal = np.copy(image)
+    vertical = np.copy(image)
     
-    # Split the text into lines
-    lines = text.split('\n')
+    cols = horizontal.shape[1]
+    horizontal_size = cols // 30
+    horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_size, 1))
+    horizontal = cv2.erode(horizontal, horizontalStructure)
+    horizontal = cv2.dilate(horizontal, horizontalStructure)
     
-    # Extract field labels (assuming labels end with ':')
-    fields = [line.strip() for line in lines if ':' in line]
+    rows = vertical.shape[0]
+    vertical_size = rows // 30
+    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, vertical_size))
+    vertical = cv2.erode(vertical, verticalStructure)
+    vertical = cv2.dilate(vertical, verticalStructure)
     
-    # Group fields into pairs, with the last one alone if odd number
-    grouped_fields = [fields[i:i+2] for i in range(0, len(fields), 2)]
-    if len(fields) % 2 != 0:
-        grouped_fields[-1] = [grouped_fields[-1][0]]
-    
-    return grouped_fields
+    return horizontal, vertical
 
-def main(file_path):
-    images = read_file(file_path)
+def extract_form_fields(image):
+    # Preprocess the image
+    processed = preprocess_image(image)
     
-    if not images:
-        print(f"Error: Could not read file {file_path}")
+    # Detect lines
+    horizontal, vertical = detect_lines(processed)
+    
+    # Combine horizontal and vertical lines
+    mask = horizontal + vertical
+    
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Sort contours by y-coordinate
+    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[1])
+    
+    fields = []
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if w > 50 and h > 10:  # Filter out small contours
+            roi = processed[y:y+h, x:x+w]
+            text = pytesseract.image_to_string(roi, config='--psm 6')
+            text = text.strip()
+            if ':' in text:
+                label, value = text.split(':', 1)
+                fields.append((label.strip(), value.strip()))
+            elif text:
+                fields.append((text, ''))
+    
+    return fields
+
+def main(image_path):
+    # Read the image
+    image = cv2.imread(image_path)
+    
+    if image is None:
+        print(f"Error: Could not read image {image_path}")
         return
 
-    for i, image in enumerate(images):
-        processed_image = preprocess_image(image)
-        extracted_data = extract_form_data(processed_image)
-        
-        print(f"Extracted form fields from page {i+1}:")
-        for group in extracted_data:
-            print(group)
-        print("\n")
+    # Extract form fields
+    extracted_fields = extract_form_fields(image)
+    
+    print("Extracted form fields:")
+    for label, value in extracted_fields:
+        print(f"{label}: {value}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract form data from an image or PDF")
-    parser.add_argument("file_path", type=str, help="Path to the form image or PDF")
-    args = parser.parse_args()
-    main(args.file_path)
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <image_path>")
+    else:
+        main(sys.argv[1])
