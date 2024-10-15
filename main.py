@@ -150,7 +150,6 @@ def main(instruction, self_talk, model='ollama'):
                 else:
                     raise ValueError("Invalid model")
 
-                
                 second_response = ''.join(second_response_stream)
 
                 print("Germany says: " + second_response)
@@ -173,7 +172,7 @@ def main(instruction, self_talk, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in English, inquiring how to get citizenship. Your replies contain only Ilya's speech.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You are inquiring how to get citizenship. Your replies contain only Ilya's speech.", 
                         help="Instruction for Ollama's behavior")
     parser.add_argument("--self-talk", default=False, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
