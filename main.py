@@ -67,6 +67,7 @@ def main(instruction, self_talk, model='ollama'):
     })
 
     collected_text = ''
+    second_response = ''
     while True:
         if not self_talk:
             print("Press Enter to stop speech recognition and get Ollama's response...")
@@ -80,8 +81,10 @@ def main(instruction, self_talk, model='ollama'):
             input_queue.get()  # Clear the queue
             recording_stop_event.set()  # Stop recording when Enter is pressed
         else:
-            if len(collected_text) == 0:
+            if len(second_response) == 0:
                 collected_text = "Write a reply."
+            else:
+                collected_text = second_response
 
         if collected_text:
             print("Ollama prompt: " + collected_text)
@@ -115,7 +118,7 @@ def main(instruction, self_talk, model='ollama'):
             if not self_talk:
                 message_to_append = first_response
             else:
-                message_to_append = "reply as a German beuracrat on the message: " + first_response
+                message_to_append = "reply in English as a German beuracrat on the message: " + first_response
             conversation_history.append({
                 'role': 'assistant',
                 'content': message_to_append
@@ -162,9 +165,9 @@ def main(instruction, self_talk, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy in German only. You speak only in polite tone inquiring how to get citizenship.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in polite tone inquiring how to get citizenship.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--self-talk", default=False, action="store_true", help="Self-talking mode.")
+    parser.add_argument("--self-talk", default=True, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
