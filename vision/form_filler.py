@@ -35,14 +35,9 @@ def fill_form_with_model(form_data, model):
         print("Sending prompt to Ollama...")
         response = ollama.chat(model='llama3.2:1b', messages=chat_history)
         reply = response['message']['content']
-    elif model == 'groq':
-        groq_api_key = os.environ['GROQ_API_KEY']
-        client = groq.Client()  # Initialize with API key
-        # We need to implement the correct way to use the Groq library
-        # For now, let's assume it's similar to the ollama chat
-        chat_history = [{'role': 'user', 'content': prompt}]
-        response = client.chat(model='groq', messages=chat_history)
-        reply = response.json()
+    elif model == 'gemini':
+        # TODO: Implement Gemini API call
+        raise NotImplementedError("Gemini integration is not yet implemented.")
     else:
         raise ValueError("Invalid model")
     
@@ -115,7 +110,7 @@ def display_filled_form(filled_form):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         image_path = 'visa.png'
-        model = 'groq'
+        model = 'gemini'
     else:
         image_path = sys.argv[1]
         model = sys.argv[2]
