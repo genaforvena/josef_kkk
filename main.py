@@ -14,7 +14,7 @@ def predict_text_generation_sample(chat_history: list, api_key: str):
 
     response = client.chat.completions.create(
         messages=chat_history,
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
     )
     return response.choices[0].message.content
 
@@ -179,7 +179,7 @@ def main(instruction, self_talk, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in English, inquiring how to get citizenship.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in English, inquiring how to get citizenship. Your replies contain only Ilya's speech.", 
                         help="Instruction for Ollama's behavior")
     parser.add_argument("--self-talk", default=True, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
