@@ -2,68 +2,104 @@ import pyaudio
 import wave
 import os
 import time
+import threading
+import queue
 from groq import Groq
 
 # Audio recording parameters
-CHUNK: int = 1024
-FORMAT: int = pyaudio.paInt16
-CHANNELS: int = 1
-RATE: int = 44100
-RECORD_SECONDS: int = 5  # Reduced from 5 to 2 seconds for more responsive detection
-WAVE_OUTPUT_FILENAME: str = "temp_audio.wav"
+CHUNK = 1024
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 44100
+WAVE_OUTPUT_FILENAME = "temp_audio.wav"
 
-def record_audio() -> None:
-    p: pyaudio.PyAudio = pyaudio.PyAudio()
-    stream: pyaudio.Stream = p.open(format=FORMAT,
-                    channels=CHANNELS,
-                    rate=RATE,
-                    input=True,
-                    frames_per_buffer=CHUNK)
-    
-    frames: list = []
-    
-    for _ in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-        data: bytes = stream.read(CHUNK)
-        frames.append(data)
-    
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-    
-    wf: wave.Wave_write = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-    wf.setnchannels(CHANNELS)
-    wf.setsampwidth(p.get_sample_size(FORMAT))
-    wf.setframerate(RATE)
-    wf.writeframes(b''.join(frames))
-    wf.close()
+class AudioRecorder:
+    def __init__(self):
+        self.audio_queue = queue.Queue()
+        self.transcription_queue = queue.Queue()
+        self.stop_recording = threading.Event()
+        self.client = Groq()
 
-client = Groq()
+    def record_audio(self):
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK)
+        
+        while not self.stop_recording.is_set():
+            data = stream.read(CHUNK)
+            self.audio_queue.put(data)
+        
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
 
-def transcribe():
-    with open(WAVE_OUTPUT_FILENAME, "rb") as file:
-        transcription = client.audio.transcriptions.create(
-        file=(WAVE_OUTPUT_FILENAME, file.read()),
-        model="whisper-large-v3-turbo",
-        response_format="verbose_json",
-        )
-        yield transcription.text
-        
-def transcribe_and_translate():
-    while True:
-        record_audio()
-        
-        text: str = transcribe()
-        yield text
-        
-        # Remove temporary audio file
-        os.remove(WAVE_OUTPUT_FILENAME)
-        
-        time.sleep(0.01)  # Short pause to prevent CPU overload
+    def save_audio(self, frames):
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
 
-if __name__ == '__main__':
-    for original in transcribe_and_translate():
-        if original:
-            print(f"Original: {''.join(original)}")
-            print("-----------------------")
-        else:
-            print("No speech detected")
+    def transcribe(self):
+        with open(WAVE_OUTPUT_FILENAME, "rb") as file:
+            transcription = self.client.audio.transcriptions.create(
+                file=(WAVE_OUTPUT_FILENAME, file.read()),
+                model="whisper-large-v3-turbo",
+                response_format="verbose_json",
+            )
+            return transcription.text
+
+    def transcribe_audio(self):
+        while not self.stop_recording.is_set():
+            frames = []
+            start_time = time.time()
+            
+            while time.time() - start_time < 5 and not self.stop_recording.is_set():  # Collect 5 seconds of audio
+                try:
+                    frames.append(self.audio_queue.get(timeout=0.1))
+                except queue.Empty:
+                    continue
+            
+            if frames:
+                self.save_audio(frames)
+                text = self.transcribe()
+                if text:
+                    self.transcription_queue.put(text)
+                os.remove(WAVE_OUTPUT_FILENAME)
+
+    def continuous_transcribe(self):
+        self.stop_recording.clear()
+        self.audio_queue = queue.Queue()
+        self.transcription_queue = queue.Queue()
+
+        record_thread = threading.Thread(target=self.record_audio)
+        transcribe_thread = threading.Thread(target=self.transcribe_audio)
+
+        record_thread.start()
+        transcribe_thread.start()
+
+        try:
+            while not self.stop_recording.is_set():
+                try:
+                    yield self.transcription_queue.get(timeout=0.1)
+                except queue.Empty:
+                    continue
+        finally:
+            self.stop_recording.set()
+            record_thread.join()
+            transcribe_thread.join()
+
+    def stop(self):
+        self.stop_recording.set()
+
+recorder = AudioRecorder()
+
+def continuous_transcribe():
+    return recorder.continuous_transcribe()
+
+def stop_recording():
+    recorder.stop()

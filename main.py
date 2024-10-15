@@ -20,7 +20,7 @@ def predict_text_generation_sample(chat_history: list, api_key: str):
 
 def collect_input(input_queue, stop_event):
     collected_text = ""
-    for original in recorder.transcribe_and_translate():
+    for original in recorder.continuous_transcribe():
         if stop_event.is_set():
             break
         collected_text += ''.join(original)
