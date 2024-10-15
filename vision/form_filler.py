@@ -113,7 +113,7 @@ def display_filled_form(filled_form):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         image_path = 'visa.png'
-        model = 'ollama'
+        model = 'groq'
     else:
         image_path = sys.argv[1]
         model = sys.argv[2]
