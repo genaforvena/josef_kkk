@@ -38,7 +38,7 @@ def fill_form_with_model(form_data, model):
         reply = response['message']['content']
     elif model == 'groq':
         groq_api_key = os.environ['GROQ_API_KEY']
-        client = groq.Client(groq_api_key)
+        client = groq.Client()  # Initialize without arguments
         response = client.query(prompt)
         reply = response.json()
     else:
