@@ -5,12 +5,22 @@ from typing import List, Dict
 
 import ollama
 from form_extractor import extract_fields
-from groq_client import Groq
+from groq import Groq
+
 def predict_text_generation_sample(content: str, api_key: str):
     """Predicts text generation with Groq API using Groq."""
     client = Groq(api_key=api_key)
-    response = client.generate(prompt=content)
-    return response["content"]
+
+    response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": content,
+            }
+        ],
+        model="llama3-8b-8192",
+    )
+    return response.choices[0].message.content
 
 
 def fill_form_with_model(form_data: List[Dict], model: str):
@@ -51,13 +61,7 @@ def fill_form_with_model(form_data: List[Dict], model: str):
     else:
         raise ValueError("Invalid model")
 
-    try:
-        filled_form = json.loads(reply)
-        return filled_form
-    except json.JSONDecodeError:
-        print("Error: Could not parse LLM response as JSON. Raw response:")
-        print(reply)
-        return {}
+    return reply
 
 def fill_form(image_path, model='ollama'):
     input_data = extract_fields(image_path)
@@ -67,8 +71,8 @@ def fill_form(image_path, model='ollama'):
     
     filled_form = fill_form_with_model(input_data, model)
     
+    print("\n\n\n-----------------------------------------")
     print("\nFilled form data:")
-    print(json.dumps(filled_form, indent=2))
     
     return filled_form
 
@@ -88,5 +92,4 @@ if __name__ == "__main__":
         image_path = sys.argv[1]
         model = sys.argv[2]
     
-    filled_form = fill_form(image_path, model)
-    display_filled_form(filled_form)
+    print(fill_form(image_path, model))
