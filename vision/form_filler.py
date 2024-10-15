@@ -1,5 +1,6 @@
 import os
 import json
+import sys
 from typing import List, Dict
 
 import ollama
@@ -35,7 +36,7 @@ def predict_text_generation_sample(
     return response.predictions[0]["content"]
 
 
-def fill_form_with_model(form_ List[Dict], model: str):
+def fill_form_with_model(form_data: List[Dict], model: str):
     prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
     1. Provide an English explanation of what the field means.
     2. Give an example of how to fill it out in German.
