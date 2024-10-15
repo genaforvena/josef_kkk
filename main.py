@@ -6,6 +6,7 @@ import keyboard
 from speaker import speak_stream
 import re
 import argparse
+from groq_client import Groq
 
 def collect_input(input_queue, stop_event):
     collected_text = ""
@@ -40,7 +41,7 @@ def paragraph_generator(text_stream):
     if paragraph:
         yield paragraph.strip()
 
-def main(instruction, use_second_response):
+def main(instruction, use_second_response, model='ollama'):
     print("Starting conversation...")
     
     input_queue = queue.Queue()
@@ -83,7 +84,15 @@ def main(instruction, use_second_response):
             print("Press Space to stop the response..." if not use_second_response else "Generating response...")
 
             stop_event = threading.Event()
-            response_stream = stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)
+            if model == 'ollama':
+                response_stream = stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)
+            elif model == 'groq':
+                api_key = os.getenv("GROQ_API_KEY", "")
+                groq_client = Groq(api_key=api_key)
+                response_stream = groq_client.generate(prompt=collected_text)
+            else:
+                raise ValueError("Invalid model")
+
             sentence_stream = paragraph_generator(response_stream)
             
             speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
@@ -104,7 +113,13 @@ def main(instruction, use_second_response):
 
                 print("\nGenerating second response...")
                 stop_event.clear()
-                second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
+                if model == 'ollama':
+                    second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
+                elif model == 'groq':
+                    second_response_stream = groq_client.generate(prompt=first_response)
+                else:
+                    raise ValueError("Invalid model")
+
                 second_sentence_stream = paragraph_generator(second_response_stream)
                 
                 speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
@@ -135,6 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are talking to German bureaucracy. You speak only in English, like a soundcloud rapper with heavy Beckett influence. You act erratically as a maniac.", 
                         help="Instruction for Ollama's behavior")
     parser.add_argument("--use_second_response", default=True, action="store_true", help="Use second response as input for next iteration")
+    parser.add_argument("--model", type=str, default="ollama", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
-    main(args.instruction, args.use_second_response)
+    main(args.instruction, args.use_second_response, args.model)
