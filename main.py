@@ -3,7 +3,6 @@ import recorder
 import threading
 import queue
 import ollama
-import keyboard
 from speaker import speak_stream
 import re
 import argparse
@@ -57,6 +56,7 @@ def main(instruction, self_talk, model='ollama'):
     
     input_queue = queue.Queue()
     conversation_history = []
+    second_conversation_history = []
     client = ollama.Client()
     recording_stop_event = threading.Event()
 
@@ -65,7 +65,12 @@ def main(instruction, self_talk, model='ollama'):
         'role': 'system',
         'content': instruction
     })
-
+    if self_talk:
+        second_conversation_history.append({
+            'role': 'system',
+            'content': "Reply only in English as a German beuracrat. Speak only English!" 
+        })
+    
     collected_text = ''
     second_response = ''
     while True:
@@ -82,10 +87,10 @@ def main(instruction, self_talk, model='ollama'):
             recording_stop_event.set()  # Stop recording when Enter is pressed
         else:
             if len(second_response) == 0:
-                collected_text = "Write a reply."
+                collected_text = "Ask as Ilya Mozerov"
             else:
-                collected_text = second_response
-
+                collected_text = "Reply to the following as Ilya Mozerov: " + second_response
+            
         if collected_text:
             print("Ollama prompt: " + collected_text)
             conversation_history.append({
@@ -106,47 +111,59 @@ def main(instruction, self_talk, model='ollama'):
             else:
                 raise ValueError("Invalid model")
 
-            sentence_stream = paragraph_generator(response_stream)
+            first_response = ''.join(response_stream)
+            sentence_stream = paragraph_generator(first_response)
             
             speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
             speak_thread.start()
 
             speak_thread.join()
 
-            first_response = ' '.join(sentence_stream)
             # Add Ollama's response to conversation history
             if not self_talk:
                 message_to_append = first_response
+                conversation_history.append({
+                    'role': 'assistant',
+                    'content': message_to_append
+                })
             else:
-                message_to_append = "reply in English as a German beuracrat on the message: " + first_response
-            conversation_history.append({
-                'role': 'assistant',
-                'content': message_to_append
-            })
-            
+                # Ensure first_response is added to second_conversation_history
+                second_conversation_history.append({
+                    'role': 'assistant',
+                    'content': first_response  # This line ensures the response is recorded
+                })
+                message_to_append = "Reply to the message: " + first_response
+                second_conversation_history.append({
+                    'role': 'user',
+                    'content': message_to_append 
+                })
+                
+            # Ensure that the first_response is used in the next iteration
+            collected_text = first_response  # Use first_response as input for next iteration
 
             if self_talk:
-                keyboard.send("enter")
                 recording_stop_event.clear()
 
                 print("\nGenerating second response...")
                 stop_event.clear()
                 if model == 'ollama':
-                    second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
+                    second_response_stream = stream_ollama_response(client, 'llama3.2:1b', second_conversation_history, stop_event)
                 elif model == 'groq':
-                    second_response_stream = predict_text_generation_sample(conversation_history, api_key)
+                    second_response_stream = predict_text_generation_sample(second_conversation_history, api_key)
                 else:
                     raise ValueError("Invalid model")
 
-                second_sentence_stream = paragraph_generator(second_response_stream)
                 
+                second_response = ''.join(second_response_stream)
+
+                second_sentence_stream = paragraph_generator(second_response)
                 speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
                 speak_thread.start()
 
                 speak_thread.join()
 
-                second_response = ' '.join(second_sentence_stream)
-                conversation_history.append({'role': 'user', 'content': second_response})
+                conversation_history.append({'role': 'assistant', 'content': second_response})
+                second_conversation_history.append({'role': 'assistant', 'content': second_response})
                 collected_text = second_response  # Use second response as input for next iteration
                 recording_stop_event.clear()
 
@@ -155,9 +172,6 @@ def main(instruction, self_talk, model='ollama'):
         if not self_talk:
             print("\nContinue speaking. Press Enter to stop speech recognition and get the next response...")
             recording_stop_event.clear()
-        else:
-            keyboard.send("enter")
-
 
     # Don't forget to stop and join the speaker thread at the end
     if speak_thread:
@@ -165,7 +179,7 @@ def main(instruction, self_talk, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in polite tone inquiring how to get citizenship.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in English, inquiring how to get citizenship.", 
                         help="Instruction for Ollama's behavior")
     parser.add_argument("--self-talk", default=True, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
