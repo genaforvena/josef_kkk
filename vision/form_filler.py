@@ -23,26 +23,27 @@ def predict_text_generation_sample(content: str, api_key: str):
     return response.choices[0].message.content
 
 
-def fill_form_with_model(form_data: List[Dict], model: str):
-    prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
-    1. Provide an English explanation of what the field means.
-    2. Give an example of how to fill it out in German.
-    3. If possible, provide a suggestion for filling out the field based on common responses.
-
-    Here are the form fields:
-
-    {json.dumps(form_data, indent=2)}
-
-    Please format your response as JSON with the following structure for each field:
-    {{
-        "field_name": {{
-            "explanation": "English explanation here",
-            "example": "German example here",
-            "suggestion": "German suggestion here (if applicable)"
-        }}
-    }}
-    """
+def fill_form_with_model(image_path: str, model: str):
     if model == 'ollama':
+        form_data = extract_fields(image_path)
+        prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
+        1. Provide an English explanation of what the field means.
+        2. Give an example of how to fill it out in German.
+        3. If possible, provide a suggestion for filling out the field based on common responses.
+
+        Here are the form fields:
+
+        {json.dumps(form_data, indent=2)}
+
+        Please format your response as JSON with the following structure for each field:
+        {{
+            "field_name": {{
+                "explanation": "English explanation here",
+                "example": "German example here",
+                "suggestion": "German suggestion here (if applicable)"
+            }}
+        }}
+        """
         chat_history = []
 
         chat_history.append(
@@ -57,19 +58,28 @@ def fill_form_with_model(form_data: List[Dict], model: str):
         reply = response['message']['content']
     elif model == 'groq':
         api_key = os.getenv("GROQ_API_KEY", "")
-        reply = predict_text_generation_sample(content=prompt, api_key=api_key)
+        with open(image_path, "rb") as file:
+            image_data = file.read()
+        prompt = f"""You are an assistant helping to fill out a German form. The image of the form is provided. Please process the image and provide the filled form data in JSON format with the following structure for each field:
+        {{
+            "field_name": {{
+                "explanation": "English explanation here",
+                "example": "German example here",
+                "suggestion": "German suggestion here (if applicable)"
+            }}
+        }}
+        """
+        reply = predict_text_generation_sample(content=prompt, api_key=api_key, image=image_data)
     else:
         raise ValueError("Invalid model")
 
     return reply
 
 def fill_form(image_path, model='ollama'):
-    input_data = extract_fields(image_path)
-    
     print("Original form data:")
-    print(json.dumps(input_data, indent=2))
+    print(json.dumps(extract_fields(image_path), indent=2))
     
-    filled_form = fill_form_with_model(input_data, model)
+    filled_form = fill_form_with_model(image_path, model)
     
     print("\n\n\n-----------------------------------------")
     print("\nFilled form data:")
