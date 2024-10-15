@@ -1,12 +1,8 @@
-import speech_recognition as sr
 import pyaudio
 import wave
 import os
 import time
-from typing import Generator, Tuple
-
-# Initialize recognizer
-recognizer: sr.Recognizer = sr.Recognizer()
+from groq import Groq
 
 # Audio recording parameters
 CHUNK: int = 1024
@@ -41,22 +37,23 @@ def record_audio() -> None:
     wf.writeframes(b''.join(frames))
     wf.close()
 
-def transcribe_and_translate() -> Generator[Tuple[str, str], None, None]:
+client = Groq()
+
+def transcribe():
+    with open(WAVE_OUTPUT_FILENAME, "rb") as file:
+        transcription = client.audio.transcriptions.create(
+        file=(WAVE_OUTPUT_FILENAME, file.read()),
+        model="whisper-large-v3-turbo",
+        response_format="verbose_json",
+        )
+        yield transcription.text
+        
+def transcribe_and_translate():
     while True:
         record_audio()
         
-        with sr.AudioFile(WAVE_OUTPUT_FILENAME) as source:
-            audio: sr.AudioData = recognizer.record(source)
-        
-        try:
-            text: str = recognizer.recognize_google(audio)
-            translation: str = ''
-            yield (text, translation)
-        except sr.UnknownValueError:
-            yield ('.', '')  # Return empty strings if no speech is detected
-        except sr.RequestError as e:
-            print(f"Could not request results from Speech Recognition service; {e}")
-            yield ('.', '')
+        text: str = transcribe()
+        yield text
         
         # Remove temporary audio file
         os.remove(WAVE_OUTPUT_FILENAME)
@@ -64,10 +61,9 @@ def transcribe_and_translate() -> Generator[Tuple[str, str], None, None]:
         time.sleep(0.01)  # Short pause to prevent CPU overload
 
 if __name__ == '__main__':
-    for original, translation in transcribe_and_translate():
+    for original in transcribe_and_translate():
         if original:
-            print(f"Original: {original}")
-            print(f"Translation: {translation}")
+            print(f"Original: {''.join(original)}")
             print("-----------------------")
         else:
             print("No speech detected")

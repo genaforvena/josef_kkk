@@ -20,11 +20,11 @@ def predict_text_generation_sample(chat_history: list, api_key: str):
 
 def collect_input(input_queue, stop_event):
     collected_text = ""
-    for original, translation in recorder.transcribe_and_translate():
+    for original in recorder.transcribe_and_translate():
         if stop_event.is_set():
             break
-        collected_text += original
-        print(f"Recorded: {original}")
+        collected_text += ''.join(original)
+        print(f"Recorded: {collected_text}")
         print("-----------------------")
         if not input_queue.empty():
             return collected_text
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
     parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You speak only in English, inquiring how to get citizenship. Your replies contain only Ilya's speech.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--self-talk", default=True, action="store_true", help="Self-talking mode.")
+    parser.add_argument("--self-talk", default=False, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
