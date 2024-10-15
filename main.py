@@ -1,3 +1,4 @@
+import os
 import recorder
 import threading
 import queue
@@ -142,8 +143,8 @@ def main(instruction, use_second_response, model='ollama'):
 
 
     # Don't forget to stop and join the speaker thread at the end
-    speaker.stop()
-    speaker.join()
+    if speak_thread:
+        speak_thread.join()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
