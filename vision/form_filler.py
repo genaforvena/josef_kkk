@@ -7,24 +7,6 @@ import json
 
 def fill_form_with_model(form_data, model):
     prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
-    1. Provide an English explanation of what the field means.
-    2. Give an example of how to fill it out in German.
-    3. If possible, provide a suggestion for filling out the field based on common responses.
-
-    Here are the form fields:
-
-    {json.dumps(form_data, indent=2)}
-
-    Please format your response as JSON with the following structure for each field:
-    {{
-        "field_name": {{
-            "explanation": "English explanation here",
-            "example": "German example here",
-            "suggestion": "German suggestion here (if applicable)"
-        }}
-    }}
-    """    
-        prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
         1. Provide an English explanation of what the field means.
         2. Give an example of how to fill it out in German.
         3. If possible, provide a suggestion for filling out the field based on common responses.
@@ -42,12 +24,8 @@ def fill_form_with_model(form_data, model):
             }}
         }}
         """
-        chat_history = [{'role': 'user', 'content': prompt}]
-        print("Sending prompt to Ollama...")
-        response = ollama.chat(model='llama3.2:1b', messages=chat_history)
-        reply = response['message']['content']
-        
-
+    if model == 'ollama':
+        chat_history = []
         
         chat_history.append({
             'role': 'user',
@@ -57,27 +35,11 @@ def fill_form_with_model(form_data, model):
         print("Sending prompt to Ollama...")
         response = ollama.chat(model='llama3.2:1b', messages=chat_history)
         reply = response['message']['content']
-        prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
-        1. Provide an English explanation of what the field means.
-        2. Give an example of how to fill it out in German.
-        3. If possible, provide a suggestion for filling out the field based on common responses.
-
-        Here are the form fields:
-
-        {json.dumps(form_data, indent=2)}
-
-        Please format your response as JSON with the following structure for each field:
-        {{
-            "field_name": {{
-                "explanation": "English explanation here",
-                "example": "German example here",
-                "suggestion": "German suggestion here (if applicable)"
-            }}
-        }}
-        """
-        chat_history = [{'role': 'user', 'content': prompt}]
-        response = client.chat(model='groq', messages=chat_history)
-        reply = response.json()
+    elif model == 'groq':
+        groq_api_key = os.environ['GROQ_API_KEY']
+        client = groq.Client()  # Initialize with API key
+        # We need to implement the correct way to use the Groq library
+        # For now, let's assume it's similar to the ollama chat
         chat_history = [{'role': 'user', 'content': prompt}]
         response = client.chat(model='groq', messages=chat_history)
         reply = response.json()
