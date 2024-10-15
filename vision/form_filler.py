@@ -9,7 +9,7 @@ from groq._client import Groq
 def predict_text_generation_sample(content: str, api_key: str):
     """Predicts text generation with Groq API using Groq."""
     client = Groq(api_key=api_key)
-    response = client.generate_text(prompt=content)
+    response = client.generate(prompt=content)
     return response["content"]
 
 
