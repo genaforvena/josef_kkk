@@ -5,21 +5,12 @@ from typing import List, Dict
 
 import ollama
 from form_extractor import extract_fields
-import os
-import requests
+from groq import GroqClient
 def predict_text_generation_sample(content: str, api_key: str):
-    """Predicts text generation with Groq API."""
-    url = "https://api.groq.com/v1/generate"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "prompt": content
-    }
-    response = requests.post(url, headers=headers, json=data)
-    response.raise_for_status()
-    return response.json()["content"]
+    """Predicts text generation with Groq API using GroqClient."""
+    client = GroqClient(api_key=api_key)
+    response = client.generate(prompt=content)
+    return response["content"]
 
 
 def fill_form_with_model(form_data: List[Dict], model: str):
