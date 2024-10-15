@@ -6,3 +6,6 @@ numpy==2.1.2
 pytesseract==0.3.13
 Pillow==10.4.0
 pdf2image==1.17.0
+pyaudio==0.2.13
+groq==0.3.6
+ollama==0.3.6
