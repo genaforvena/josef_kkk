@@ -38,7 +38,7 @@ def fill_form_with_model(form_data, model):
         reply = response['message']['content']
     elif model == 'groq':
         groq_api_key = os.environ['GROQ_API_KEY']
-        client = groq.Client()  # Initialize without arguments
+        client = groq.Client(groq_api_key)  # Initialize with API key
         # We need to implement the correct way to use the Groq library
         # For now, let's assume it's similar to the ollama chat
         chat_history = [{'role': 'user', 'content': prompt}]
