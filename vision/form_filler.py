@@ -5,11 +5,11 @@ from typing import List, Dict
 
 import ollama
 from form_extractor import extract_fields
-from groq._client import Client
+from groq._client import Groq
 def predict_text_generation_sample(content: str, api_key: str):
-    """Predicts text generation with Groq API using GroqClient."""
-    client = Client()
-    response = client.generate(prompt=content)
+    """Predicts text generation with Groq API using Groq."""
+    client = Groq(api_key=api_key)
+    response = client.generate_text(prompt=content)
     return response["content"]
 
 
