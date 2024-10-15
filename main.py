@@ -3,7 +3,7 @@ import recorder
 import threading
 import queue
 import ollama
-from speaker import speak_stream
+from windows_speaker import speak_async_sapi
 import re
 import argparse
 from groq import Groq
@@ -112,12 +112,9 @@ def main(instruction, self_talk, model='ollama'):
                 raise ValueError("Invalid model")
 
             first_response = ''.join(response_stream)
-            sentence_stream = paragraph_generator(first_response)
             
-            speak_thread = threading.Thread(target=speak_stream, args=(sentence_stream, stop_event))
-            speak_thread.start()
-
-            speak_thread.join()
+            print("Ilya says: " + first_response)
+            speak_async_sapi(first_response).join()
 
             # Add Ollama's response to conversation history
             if not self_talk:
@@ -156,11 +153,8 @@ def main(instruction, self_talk, model='ollama'):
                 
                 second_response = ''.join(second_response_stream)
 
-                second_sentence_stream = paragraph_generator(second_response)
-                speak_thread = threading.Thread(target=speak_stream, args=(second_sentence_stream, stop_event))
-                speak_thread.start()
-
-                speak_thread.join()
+                print("Germany says: " + second_response)
+                speak_async_sapi(second_response).join() 
 
                 conversation_history.append({'role': 'assistant', 'content': second_response})
                 second_conversation_history.append({'role': 'assistant', 'content': second_response})

@@ -5,7 +5,7 @@ def init_engine():
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
     # You can change the voice by index. 0 is usually the default male voice, 1 is usually the default female voice.
-    engine.setProperty('voice', voices[0].id)
+    engine.setProperty('voice', voices[2].id)
     engine.setProperty('rate', 150)  # Speed of speech
     return engine
 
