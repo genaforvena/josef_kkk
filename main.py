@@ -52,7 +52,7 @@ def paragraph_generator(text_stream):
     if paragraph:
         yield paragraph.strip()
 
-def main(instruction, use_second_response, model='ollama'):
+def main(instruction, self_talk, model='ollama'):
     print("Starting conversation...")
     
     input_queue = queue.Queue()
@@ -68,7 +68,7 @@ def main(instruction, use_second_response, model='ollama'):
 
     collected_text = ''
     while True:
-        if not use_second_response:
+        if not self_talk:
             print("Press Enter to stop speech recognition and get Ollama's response...")
             input_thread = threading.Thread(target=lambda q: q.put(input()), args=(input_queue,))
             input_thread.start()
@@ -92,7 +92,7 @@ def main(instruction, use_second_response, model='ollama'):
 
             print("\nProcessing collected text with Ollama (llama3.2 model)...")
             print("\nOllama's response:")
-            print("Press Space to stop the response..." if not use_second_response else "Generating response...")
+            print("Press Space to stop the response..." if not self_talk else "Generating response...")
 
             stop_event = threading.Event()
             if model == 'ollama':
@@ -112,12 +112,17 @@ def main(instruction, use_second_response, model='ollama'):
 
             first_response = ' '.join(sentence_stream)
             # Add Ollama's response to conversation history
+            if not self_talk:
+                message_to_append = first_response
+            else:
+                message_to_append = "reply as a German beuracrat on the message: " + first_response
             conversation_history.append({
                 'role': 'assistant',
-                'content': first_response
+                'content': message_to_append
             })
+            
 
-            if use_second_response:
+            if self_talk:
                 keyboard.send("enter")
                 recording_stop_event.clear()
 
@@ -144,7 +149,7 @@ def main(instruction, use_second_response, model='ollama'):
 
             print("\n\nResponse ended.")
 
-        if not use_second_response:
+        if not self_talk:
             print("\nContinue speaking. Press Enter to stop speech recognition and get the next response...")
             recording_stop_event.clear()
         else:
@@ -157,10 +162,10 @@ def main(instruction, use_second_response, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in conversation with German bureaucracy. You speak only in polite tone inquiring how to get citizenship.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy in German only. You speak only in polite tone inquiring how to get citizenship.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--use_second_response", default=False, action="store_true", help="Reply to the last message as if you are german beuracrat.")
+    parser.add_argument("--self-talk", default=False, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
-    main(args.instruction, args.use_second_response, args.model)
+    main(args.instruction, args.self_talk, args.model)
