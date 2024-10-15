@@ -4,7 +4,7 @@ import sys
 from typing import List, Dict
 
 import ollama
-from form_extractor import extract_fields
+from vision.form_extractor import extract_fields
 from groq import Groq
 
 def predict_text_generation_sample(content: str, api_key: str):

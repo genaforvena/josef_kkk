@@ -7,7 +7,17 @@ import keyboard
 from speaker import speak_stream
 import re
 import argparse
-from groq_client import Groq
+from groq import Groq
+
+def predict_text_generation_sample(chat_history: list, api_key: str):
+    """Predicts text generation with Groq API using Groq."""
+    client = Groq(api_key=api_key)
+
+    response = client.chat.completions.create(
+        messages=chat_history,
+        model="llama3-8b-8192",
+    )
+    return response.choices[0].message.content
 
 def collect_input(input_queue, stop_event):
     collected_text = ""
@@ -89,8 +99,7 @@ def main(instruction, use_second_response, model='ollama'):
                 response_stream = stream_ollama_response(client, 'llama3.2', conversation_history, stop_event)
             elif model == 'groq':
                 api_key = os.getenv("GROQ_API_KEY", "")
-                groq_client = Groq(api_key=api_key)
-                response_stream = groq_client.generate(prompt=collected_text)
+                response_stream = predict_text_generation_sample(conversation_history, api_key)
             else:
                 raise ValueError("Invalid model")
 
@@ -117,7 +126,7 @@ def main(instruction, use_second_response, model='ollama'):
                 if model == 'ollama':
                     second_response_stream = stream_ollama_response(client, 'llama3.2:1b', conversation_history, stop_event)
                 elif model == 'groq':
-                    second_response_stream = groq_client.generate(prompt=first_response)
+                    second_response_stream = predict_text_generation_sample(conversation_history, api_key)
                 else:
                     raise ValueError("Invalid model")
 
@@ -148,10 +157,10 @@ def main(instruction, use_second_response, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov. You are talking to German bureaucracy. You speak only in English, like a soundcloud rapper with heavy Beckett influence. You act erratically as a maniac.", 
+    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in conversation with German bureaucracy. You speak only in polite tone inquiring how to get citizenship.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--use_second_response", default=True, action="store_true", help="Use second response as input for next iteration")
-    parser.add_argument("--model", type=str, default="ollama", choices=["ollama", "groq"], help="Model to use for text generation")
+    parser.add_argument("--use_second_response", default=False, action="store_true", help="Reply to the last message as if you are german beuracrat.")
+    parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
     main(args.instruction, args.use_second_response, args.model)
