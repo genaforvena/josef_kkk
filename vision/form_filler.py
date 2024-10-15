@@ -68,7 +68,7 @@ def fill_form_with_model(form_data: List[Dict], model: str):
         print("Sending prompt to Ollama...")
         response = ollama.chat(model='llama3.2:1b', messages=chat_history)
         reply = response['message']['content']
-    elif model == 'gemini':
+    elif model == 'groq':
         project_id = os.getenv("PROJECT_ID", "")
         endpoint_id = os.getenv("ENDPOINT_ID", "")
         api_key = os.getenv("API_KEY", "")
@@ -110,7 +110,7 @@ def display_filled_form(filled_form):
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         image_path = 'vision/visa.png'
-        model = 'gemini'
+        model = 'groq'
     else:
         image_path = sys.argv[1]
         model = sys.argv[2]
