@@ -80,7 +80,7 @@ def fill_form_with_model(form_data: str, image_path: str, model: str):
             }
         )
         completion = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="llama-3.2-90b-vision-preview",
             messages=chat_history,
             stream=False,
             stop=None
@@ -111,7 +111,7 @@ def fill_form_with_model(form_data: str, image_path: str, model: str):
                     }
                 )
         completion = client.chat.completions.create(
-            model="llama-3.2-11b-vision-preview",
+            model="llama-3.2-90b-vision-preview",
             messages=chat_history,
             stream=False,
         )
