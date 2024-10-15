@@ -39,7 +39,10 @@ def fill_form_with_model(form_data, model):
     elif model == 'groq':
         groq_api_key = os.environ['GROQ_API_KEY']
         client = groq.Client()  # Initialize without arguments
-        response = client.query(prompt)
+        # We need to implement the correct way to use the Groq library
+        # For now, let's assume it's similar to the ollama chat
+        chat_history = [{'role': 'user', 'content': prompt}]
+        response = client.chat(model='groq', messages=chat_history)
         reply = response.json()
     else:
         raise ValueError("Invalid model")
