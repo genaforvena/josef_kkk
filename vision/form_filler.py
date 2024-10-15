@@ -69,7 +69,33 @@ def fill_form_with_model(image_path: str, model: str):
             }}
         }}
         """
-        reply = predict_text_generation_sample(content=prompt, api_key=api_key, image=image_data)
+        client = Groq(api_key=api_key)
+        completion = client.chat.completions.create(
+            model="llava-v1.5-7b-4096-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": ""
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_data.encode('base64')}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            temperature=0,
+            max_tokens=1024,
+            top_p=1,
+            stream=False,
+            stop=None
+        )
+        reply = completion.choices[0].message
     else:
         raise ValueError("Invalid model")
 
