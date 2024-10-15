@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.aider.chat.history.md
+.aider.input.history
+
 *.wav
 
 # C extensions

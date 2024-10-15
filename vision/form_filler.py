@@ -65,7 +65,7 @@ def display_filled_form(filled_form):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        image_path = 'https://asserts-marketing.s3.eu-central-1.amazonaws.com/Public/Blog+Images/steuererklaerung.de/muster-lstb-2023.jpg'
+        image_path = 'visa.png'
     else:
         image_path = sys.argv[1]
     
