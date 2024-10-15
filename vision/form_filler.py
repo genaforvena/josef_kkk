@@ -5,35 +5,21 @@ from typing import List, Dict
 
 import ollama
 from form_extractor import extract_fields
-from google.api_core import client_options
-from google.cloud import aiplatform_v1beta1 as aiplatform
-def _get_client_options() -> client_options.ClientOptions:
-    """Creates client options with endpoint set to use US region."""
-    return client_options.ClientOptions(api_endpoint="us-central1-aiplatform.googleapis.com")
-
-
-def predict_text_generation_sample(
-    project_id: str,
-    endpoint_id: str,
-    content: str,
-    location: str = "us-central1",
-    api_key: str = None,  # Replace with your API key
-):
-    """Predicts text generation with a Large Language Model."""
-
-    # Initialize the API client
-    client_options = _get_client_options()
-    client = aiplatform.PredictionServiceClient(client_options=client_options)
-
-    endpoint = f"projects/{project_id}/locations/{location}/endpoints/{endpoint_id}"
-
-    response = client.predict(
-        endpoint=endpoint,
-        instances=[{"content": content}],
-        parameters={},
-    )
-    print(response.predictions)
-    return response.predictions[0]["content"]
+import os
+import requests
+def predict_text_generation_sample(content: str, api_key: str):
+    """Predicts text generation with Groq API."""
+    url = "https://api.groq.com/v1/generate"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "prompt": content
+    }
+    response = requests.post(url, headers=headers, json=data)
+    response.raise_for_status()
+    return response.json()["content"]
 
 
 def fill_form_with_model(form_data: List[Dict], model: str):
@@ -69,12 +55,8 @@ def fill_form_with_model(form_data: List[Dict], model: str):
         response = ollama.chat(model='llama3.2:1b', messages=chat_history)
         reply = response['message']['content']
     elif model == 'groq':
-        project_id = os.getenv("PROJECT_ID", "")
-        endpoint_id = os.getenv("ENDPOINT_ID", "")
-        api_key = os.getenv("API_KEY", "")
-        reply = predict_text_generation_sample(
-            project_id=project_id, endpoint_id=endpoint_id, content=prompt, api_key=api_key
-        )
+        api_key = os.getenv("GROQ_API_KEY", "")
+        reply = predict_text_generation_sample(content=prompt, api_key=api_key)
     else:
         raise ValueError("Invalid model")
 
