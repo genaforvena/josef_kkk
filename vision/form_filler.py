@@ -4,8 +4,9 @@ import sys
 from typing import List, Dict
 
 import ollama
-from vision.form_extractor import extract_fields
+from form_extractor import extract_fields
 from groq import Groq
+import base64
 
 def predict_text_generation_sample(content: str, api_key: str):
     """Predicts text generation with Groq API using Groq."""
@@ -23,29 +24,28 @@ def predict_text_generation_sample(content: str, api_key: str):
     return response.choices[0].message.content
 
 
-def fill_form_with_model(image_path: str, model: str):
+def fill_form_with_model(form_data: str, image_path: str, model: str):
+
+    chat_history = []
     if model == 'ollama':
-        form_data = extract_fields(image_path)
         prompt = f"""You are an assistant helping to fill out a German form. For each field in the form:
-        1. Provide an English explanation of what the field means.
-        2. Give an example of how to fill it out in German.
-        3. If possible, provide a suggestion for filling out the field based on common responses.
+            1. Provide an English explanation of what the field means.
+            2. Give an example of how to fill it out in German.
+            3. If possible, provide a suggestion for filling out the field based on common responses.
 
-        Here are the form fields:
+            Here are the form fields:
 
-        {json.dumps(form_data, indent=2)}
+            {json.dumps(form_data, indent=2)}
 
-        Please format your response as JSON with the following structure for each field:
-        {{
-            "field_name": {{
-                "explanation": "English explanation here",
-                "example": "German example here",
-                "suggestion": "German suggestion here (if applicable)"
+            Please format your response as JSON with the following structure for each field:
+            {{
+                "field_name": {{
+                    "explanation": "English explanation here",
+                    "example": "German example here",
+                    "suggestion": "German suggestion here (if applicable)"
+                }}
             }}
-        }}
-        """
-        chat_history = []
-
+            """
         chat_history.append(
             {
                 'role': 'user',
@@ -60,7 +60,40 @@ def fill_form_with_model(image_path: str, model: str):
         api_key = os.getenv("GROQ_API_KEY", "")
         with open(image_path, "rb") as file:
             image_data = file.read()
-        prompt = f"""You are an assistant helping to fill out a German form. The image of the form is provided. Please process the image and provide the filled form data in JSON format with the following structure for each field:
+        client = Groq(api_key=api_key)
+        image_data_base64 = base64.b64encode(image_data).decode('utf-8')  # Encode to base64 and decode to string
+        chat_history.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": ""
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_data_base64}"  # Use the base64 encoded string
+                        }
+                    }
+                ]
+            }
+        )
+        completion = client.chat.completions.create(
+            model="llama-3.2-11b-vision-preview",
+            messages=chat_history,
+            stream=False,
+            stop=None
+        )
+        reply = completion.choices[0].message.content
+        print("Image response: " + reply)
+        chat_history.append(
+            {
+                'role': 'assistant',
+                'content': reply
+            }
+        )
+        prompt = f"""You are an assistant helping to fill out a German form. The image of the form is provided. Please process the image and provide step by step guide in JSON format with the following structure for each field:
         {{
             "field_name": {{
                 "explanation": "English explanation here",
@@ -69,46 +102,36 @@ def fill_form_with_model(image_path: str, model: str):
             }}
         }}
         """
-        client = Groq(api_key=api_key)
+
+        client = Groq()
+        chat_history.append(
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                )
         completion = client.chat.completions.create(
-            model="llava-v1.5-7b-4096-preview",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": ""
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{image_data.encode('base64')}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            temperature=0,
-            max_tokens=1024,
-            top_p=1,
+            model="llama-3.2-11b-vision-preview",
+            messages=chat_history,
             stream=False,
-            stop=None
         )
-        reply = completion.choices[0].message
+        reply = completion.choices[0].message.content
     else:
         raise ValueError("Invalid model")
 
     return reply
 
 def fill_form(image_path, model='ollama'):
-    print("Original form data:")
-    print(json.dumps(extract_fields(image_path), indent=2))
+    form_data = ''
+    if model != 'groq':
+        print("Original form data:")
+        form_data = extract_fields(image_path)
+        print(json.dumps(form_data, indent=2))
     
-    filled_form = fill_form_with_model(image_path, model)
+    filled_form = fill_form_with_model(form_data, image_path, model)
     
     print("\n\n\n-----------------------------------------")
-    print("\nFilled form data:")
+    print("\nFilled form data:" + filled_form)
     
     return filled_form
 
@@ -128,4 +151,4 @@ if __name__ == "__main__":
         image_path = sys.argv[1]
         model = sys.argv[2]
     
-    print(fill_form(image_path, model))
+    fill_form(image_path, model)
