@@ -81,15 +81,13 @@ def process_with_groq(image_path, api_key, general_instruction=None):
         })
     base64_image = encode_image(image_path)
 
-    response = client.chat.completions.create(
-        model="llama-3.2-90b-vision-preview",
-        messages=[
+    chat_history.append(
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "Based on this context suggest interesting continuation in quotation marks."
+                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a messaging app, with a conversation between two users. The conversation is in a chat format, with each message displayed in a blue bubble."
                     },
                     {
                         "type": "image_url",
@@ -99,11 +97,29 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                     }
                 ]
             }
-        ]
+    )
+    response = client.chat.completions.create(
+        model="llama-3.2-90b-vision-preview",
+        messages=chat_history
     )
     text_analysis = response.choices[0].message.content
+    chat_history = []
+    chat_history.append(
+        {
+            'role': 'assistant',
+            'content': text_analysis 
+        }
+    )
     print("Chat analysis: " + text_analysis)
- 
+    chat_history.append(
+            {
+                "role": "user",
+                "content": "Write a message from the unknown user's side to fill in the gaps. Reply with only a message text without quotation marks."
+            })
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=chat_history
+    )
     return response.choices[0].message.content
 
 def send_to_telegram(response):
@@ -124,11 +140,7 @@ def process_and_reply(general_instruction=None):
         response = process_with_groq(screenshot_path, api_key, general_instruction)
         print("Groq's response:", response)
 
-        import random
-        # Extract the text between quotes
-        random_response = random.choice([part for part in response.split('"') if part.strip()])
-        print("Random response:", random_response)
-        response = random_response
+        response = response.replace('\n', '') 
         
         send_to_telegram(response)
         print("Response sent to Telegram.")
