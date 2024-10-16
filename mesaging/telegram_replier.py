@@ -126,7 +126,7 @@ def process_and_reply(general_instruction=None):
 
         import random
         # Extract the text between quotes
-        random_response = random.choice(response.split('"') if '"' in response else [response])
+        random_response = random.choice([part for part in response.split('"') if part.strip()])
         print("Random response:", random_response)
         response = random_response
         
