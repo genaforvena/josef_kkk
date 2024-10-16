@@ -89,7 +89,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Please extract each message from it this Telegram chat screenshot. Come up with 10 short replies to continue this conversation as numbered list (number followed by dot) with quotation marks."
+                        "text": "Based on this context suggest interesting continuation in quotation marks."
                     },
                     {
                         "type": "image_url",
@@ -108,7 +108,6 @@ def process_with_groq(image_path, api_key, general_instruction=None):
 
 def send_to_telegram(response):
     pyautogui.typewrite(response)
-    pyautogui.press('enter')
 
 def process_and_reply(general_instruction=None):
     try:
@@ -126,13 +125,8 @@ def process_and_reply(general_instruction=None):
         print("Groq's response:", response)
 
         import random
-
-        lines = response.split('\n')
-        start_index = next(i for i, line in enumerate(lines) if line.startswith('1. '))
-
-        short_replies = [line.split('"')[1] for line in lines[start_index:start_index+10]]
-        # Pick a random item from the list
-        random_response = random.choice(short_replies)
+        # Extract the text between quotes
+        random_response = random.choice(response.split('"') if '"' in response else [response])
         print("Random response:", random_response)
         response = random_response
         
