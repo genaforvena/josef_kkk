@@ -114,7 +114,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
     chat_history.append(
             {
                 "role": "user",
-                "content": "Write a message from the unknown user's side to fill in the gaps. Reply with only a message text without quotation marks."
+                "content": "Write a message from the unknown user's side to fill in the gaps. Reply with only a message text without quotation marks, preferably it should be a quote from Quran."
             })
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
