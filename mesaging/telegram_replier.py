@@ -87,7 +87,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a messaging app, with a conversation between two users. The conversation is in a chat format, with each message displayed in a blue bubble. Name participants 'right' and 'left' (darker tone of bubbles). "
+                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a messaging app, with a conversation between two users. The same user might send several messages one after the other. The conversation is in a chat format, with each message displayed in a blue bubble. Name participants 'Right' (lighter tone of bubbles and have checkmarks) and 'Left' (darker tone of bubbles)."
                     },
                     {
                         "type": "image_url",
