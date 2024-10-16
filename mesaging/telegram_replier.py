@@ -8,6 +8,7 @@ from groq import Groq
 import keyboard
 import threading
 import sys
+import argparse
 
 def identify_telegram_chat_area(image):
     img_np = np.array(image)
@@ -48,7 +49,7 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def process_with_groq(image_path, api_key):
+def process_with_groq(image_path, api_key, general_instruction=None):
     client = Groq(api_key=api_key)
     base64_image = encode_image(image_path)
 
@@ -74,24 +75,37 @@ def process_with_groq(image_path, api_key):
     )
     text_analysis = response.choices[0].message.content
     print("Chat analysis: " + text_analysis)
-    response = client.chat.completions.create(
-        model="llama-3.2-90b-text-preview",
-        messages=[
+
+    chat_history = []
+    if general_instruction:
+        chat_history.append(
+                {
+                    'role': 'assistant',
+                    'content': general_instruction
+                }
+        )
+    chat_history.append(
             {
                 'role': 'assistant',
                 'content': text_analysis
-            },
+            }
+    )
+    chat_history.append(
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "Make the one paragraph of the best, witty, funny and suitable reply to the conversation in the previous message that follows the style of conversation."
+                        "text": "Make the one paragraph of the best, short, witty, funny and suitable reply to the conversation in the previous message that follows the style of conversation."
                     }
                 ]
             }
-        ]
     )
+    response = client.chat.completions.create(
+        model="llama-3.2-90b-text-preview",
+        messages=chat_history
+    )
+
     return response.choices[0].message.content
 
 def send_to_telegram(response):
@@ -101,7 +115,7 @@ def send_to_telegram(response):
     
     # Press Enter to send the message    pyautogui.press('enter')
 
-def process_and_reply():
+def process_and_reply(general_instruction=None):
     try:
         print("Processing...")
         screenshot_path = capture_telegram_chat()
@@ -110,7 +124,7 @@ def process_and_reply():
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is not set")
         
-        response = process_with_groq(screenshot_path, api_key)
+        response = process_with_groq(screenshot_path, api_key, general_instruction)
         print("Groq's response:", response)
         
         send_to_telegram(response)
@@ -120,17 +134,21 @@ def process_and_reply():
     except Exception as e:
         print(f"An error occurred: {e}")
 
-def on_hotkey():
+def on_hotkey(general_instruction=None):
     # Run the process in a separate thread to keep the script responsive
-    threading.Thread(target=process_and_reply).start()
+    threading.Thread(target=process_and_reply, args=(general_instruction,)).start()
 
 def main():
+    parser = argparse.ArgumentParser(description="Telegram chat analysis and response automation.")
+    parser.add_argument("--instruction", type=str, help="Optional general instruction for the second Groq call.")
+    args = parser.parse_args()
+
     print("Starting Telegram chat analysis and response automation...")
     print("Press Ctrl+Shift+G to capture, analyze, and reply.")
     print("Press Ctrl+C to exit.")
 
     # Set up the hotkey
-    keyboard.add_hotkey('ctrl+shift+g', on_hotkey)
+    keyboard.add_hotkey('ctrl+shift+g', lambda: on_hotkey(args.instruction))
 
     try:
         # Keep the script running
