@@ -41,24 +41,20 @@ def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
-def process_with_groq(image_path, api_key, general_instruction=None):
-    client = Groq(api_key=api_key)
-
-    chat_history = []
-    if general_instruction:
-        chat_history.append({
-            'role': 'system',
-            'content': general_instruction
-        })
+def extract_message(groq, image_path):
     base64_image = encode_image(image_path)
 
-    chat_history.append(
+    response = groq.chat.completions.create(
+        model="llama-3.2-90b-vision-preview",
+        messages=[
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a LinkedIn messaging page, with a conversation between two users. The same user might send several messages one after the other. The conversation is in a chat format, with each message displayed in a blue bubble. Name participants 'Right' (lighter tone of bubbles and have checkmarks) and 'Left' (darker tone of bubbles)."
+                        "text": """Analyze the full LinkedIn page screenshot, focusing on the open chat window in the bottom right corner. 
+                        Extract the most recent message in this chat window, including the sender's name, timestamp (if visible), and the full message content. 
+                        If the message appears to be cut off, please indicate this in your extraction."""
                     },
                     {
                         "type": "image_url",
@@ -68,12 +64,15 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                     }
                 ]
             }
+        ]
     )
-    response = client.chat.completions.create(
-        model="llama-3.2-90b-vision-preview",
-        messages=chat_history
-    )
-    text_analysis = response.choices[0].message.content
+    return response.choices[0].message.content
+
+def process_with_groq(image_path, api_key, general_instruction=None):
+    client = Groq(api_key=api_key)
+
+    text_analysis = extract_message(client, image_path)
+    
     chat_history = []
     chat_history.append(
         {
@@ -81,11 +80,18 @@ def process_with_groq(image_path, api_key, general_instruction=None):
             'content': text_analysis 
         }
     )
-    print("Chat analysis: " + text_analysis)
+    print("Open chat message analysis: " + text_analysis)
     chat_history.append(
             {
                 "role": "user",
-                "content": "Write a message from the the Right to the Left. It should to be a reply to the Left's messages. Reply with only a message text without quotation marks."
+                "content": """Based on the extracted message from the open chat window, write a reply that:
+                1. Is professional, enthusiastic, and confident.
+                2. Shows genuine interest in the topic or opportunity mentioned (if applicable).
+                3. Highlights relevant skills or experiences if appropriate to the context.
+                4. Is concise but informative (2-4 sentences).
+                5. Includes a call-to-action or next step if relevant.
+                6. Uses a friendly, personable tone to build rapport.
+                Respond with only the message text, without quotation marks or any additional context."""
             })
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
@@ -116,7 +122,7 @@ def process_and_reply(general_instruction=None):
         send_to_linkedin(response)
         print("Response sent to LinkedIn.")
         
-        os.remove(screenshot_path)
+#        os.remove(screenshot_path)
     except Exception as e:
         print(f"An error occurred: {e}")
 
@@ -141,4 +147,5 @@ def main():
         sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    client = Groq()
+    print(extract_message(client, "temp_linkedin_page.png"))
