@@ -87,7 +87,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a messaging app, with a conversation between two users. The conversation is in a chat format, with each message displayed in a blue bubble."
+                        "text": "Transcribe the conversation on the image. The image shows a screenshot of a messaging app, with a conversation between two users. The conversation is in a chat format, with each message displayed in a blue bubble. Name participants 'right' and 'left' (darker tone of bubbles). "
                     },
                     {
                         "type": "image_url",
@@ -114,7 +114,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
     chat_history.append(
             {
                 "role": "user",
-                "content": "Write a message from the unknown user's side to fill in the gaps. Reply with only a message text without quotation marks, preferably it should be a quote from Quran."
+                "content": "Write a message from the the Right to the Left. It should to be a reply to the Left's messages. Reply with only a message text without quotation marks."
             })
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
