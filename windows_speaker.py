@@ -34,7 +34,7 @@ def speak_sapi(text, voice_name=None):
     speaker.Speak(text)
     pythoncom.CoUninitialize()
 
-def speak_async_sapi(text, voice_name="Microsoft Hedda Desktop"):
+def speak_async_sapi(text, voice_name="Microsoft Zira Desktop"):
     thread = threading.Thread(target=speak_sapi, args=(text, voice_name))
     thread.start()
     return thread

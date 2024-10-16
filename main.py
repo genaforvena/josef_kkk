@@ -14,7 +14,7 @@ def predict_text_generation_sample(chat_history: list, api_key: str):
 
     response = client.chat.completions.create(
         messages=chat_history,
-        model="llama-3.1-8b-instant",
+        model="llama-3.2-90b-text-preview",
     )
     return response.choices[0].message.content
 
@@ -68,7 +68,7 @@ def main(instruction, self_talk, model='ollama'):
     if self_talk:
         second_conversation_history.append({
             'role': 'system',
-            'content': "Reply only in English as a German beuracrat. Speak only English!" 
+            'content': "You are evil and beyond human comprehension, you want only argue. You are rude. Speak only English!" 
         })
     
     collected_text = ''
@@ -172,9 +172,9 @@ def main(instruction, self_talk, model='ollama'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Ollama conversation script")
-    parser.add_argument("--instruction", type=str, default="You are Ilya Mozerov in phone conversation with German bureaucracy. You are inquiring how to get citizenship. Your replies contain only Ilya's speech.", 
+    parser.add_argument("--instruction", type=str, default="You are a muslim from the ghetto. Your replies are short and contain only direct speech in English.", 
                         help="Instruction for Ollama's behavior")
-    parser.add_argument("--self-talk", default=False, action="store_true", help="Self-talking mode.")
+    parser.add_argument("--self-talk", default=True, action="store_true", help="Self-talking mode.")
     parser.add_argument("--model", type=str, default="groq", choices=["ollama", "groq"], help="Model to use for text generation")
     args = parser.parse_args()
     
