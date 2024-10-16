@@ -13,14 +13,10 @@ import pytesseract
 import pygetwindow as gw
 
 def capture_telegram_window():
-    print("Please click on the Telegram window within 5 seconds...")
-    time.sleep(5)  # Give user time to click on the Telegram window
-
-    # Get the active window
     active_window = gw.getActiveWindow()
 
     if active_window is None:
-        print("No active window found. Make sure you clicked on the Telegram window.")
+        print("No active window found. Make sure you selected the Telegram window.")
         return None
 
     # Get window position and size
@@ -156,7 +152,7 @@ def main():
     args = parser.parse_args()
 
     print("Starting Telegram chat analysis and response automation...")
-    print("Press Ctrl+Shift+G, then click on the Telegram window within 5 seconds.")
+    print("Select the Telegram window, then press Ctrl+Shift+G.")
     print("Press Ctrl+C to exit.")
 
     keyboard.add_hotkey('ctrl+shift+g', lambda: on_hotkey(args.instruction))
