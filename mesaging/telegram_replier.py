@@ -93,7 +93,7 @@ def process_with_groq(image_path, api_key, general_instruction=None):
                 "content": [
                     {
                         "type": "text",
-                        "text": "Please extract each message from it this Telegram chat screenshot. Come up with 10 short replies to continue this conversation as numbered list with quotation marks."
+                        "text": "Please extract each message from it this Telegram chat screenshot. Come up with 10 short replies to continue this conversation as numbered list (number followed by dot) with quotation marks."
                     },
                     {
                         "type": "image_url",
